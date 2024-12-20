@@ -1,2 +1,7 @@
-streamlit==1.16.0
-razorpay==1.4.2  # Or another available version
+streamlit
+razorpay
+altair
+pandas
+numpy
+requests
+python-dotenv
