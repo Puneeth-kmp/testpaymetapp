@@ -2,8 +2,8 @@ import streamlit as st
 import razorpay
 
 # Razorpay API credentials
-RAZORPAY_KEY_ID = "rzp_test_Gi6vQ4opJMDS5u"
-RAZORPAY_KEY_SECRET = "bE7fdzTpU49kPXsMZNfc3MC6"
+RAZORPAY_KEY_ID = "rzp_test_Gi6vQ4topJMDS5u"
+RAZORPAY_KEY_SECRET = "bE7fdzTpU49kPtXsMZNfc3MC6"
 
 client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
