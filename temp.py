@@ -1,73 +1,20 @@
 import streamlit as st
-import razorpay
-
-# Razorpay API credentials
-RAZORPAY_KEY_ID = "rzp_test_Gi6vQ4topJMDS5u"
-RAZORPAY_KEY_SECRET = "bE7fdzTpU49kPtXsMZNfc3MC6"
-
-client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 # App title
 st.title("Razorpay Payment Gateway Test")
 
-# Fixed test amounts
-amount_options = {
-    "₹10": 10,
-    "₹50": 50
+# Payment links
+payment_links = {
+    "₹10": "https://razorpay.me/@jstautomation?amount=CeQsAR0nTC%2BND0Le6liYzQ%3D%3D",
+    "₹50": "https://razorpay.me/@jstautomation?amount=bMZtQmLjQWplBAmd%2FyQdEA%3D%3D"
 }
 
 # Create a dropdown for selecting amount
-amount_choice = st.selectbox("Select Amount to Pay", options=list(amount_options.keys()))
-
-# Get the amount in numeric form (in INR)
-amount = amount_options[amount_choice]
+amount_choice = st.selectbox("Select Amount to Pay", options=list(payment_links.keys()))
 
 st.header(f"Test Payment with {amount_choice}")
 
+# Button to redirect to the payment link
 if st.button(f"Pay {amount_choice} Now"):
-    # Create Razorpay order
-    try:
-        order_data = {
-            "amount": amount * 100,  # Convert amount to paise
-            "currency": "INR",
-            "payment_capture": 1
-        }
-        order = client.order.create(order_data)
-
-        st.write("**Payment Details**")
-        st.json(order)
-
-        # Razorpay Checkout Script
-        st.markdown(
-            f"""
-            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-            <script>
-                var options = {{
-                    "key": "{RAZORPAY_KEY_ID}",
-                    "amount": {order['amount']},  // Amount in paise
-                    "currency": "INR",
-                    "name": "Test Payment",
-                    "description": "Pay {amount_choice}",
-                    "order_id": "{order['id']}",
-                    "handler": function (response) {{
-                        alert("Payment Successful! Payment ID: " + response.razorpay_payment_id);
-                        // You can call your server here to verify the payment
-                    }},
-                    "prefill": {{
-                        "name": "Test User",
-                        "email": "test@example.com",
-                        "contact": "9999999999"
-                    }},
-                    "theme": {{
-                        "color": "#3399cc"
-                    }}
-                }};
-                var rzp1 = new Razorpay(options);
-                rzp1.open();
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
-
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+    # Redirect to the appropriate Razorpay payment link
+    st.markdown(f"[Click here to make payment of {amount_choice}]( {payment_links[amount_choice]} )")
