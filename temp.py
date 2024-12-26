@@ -9,12 +9,22 @@ client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 # App title
 st.title("Razorpay Payment Gateway Test")
-st.header("Test Payment with ₹10")
 
-# Fixed test amount
-amount = 10
+# Fixed test amounts
+amount_options = {
+    "₹10": 10,
+    "₹50": 50
+}
 
-if st.button("Pay ₹10 Now"):
+# Create a dropdown for selecting amount
+amount_choice = st.selectbox("Select Amount to Pay", options=list(amount_options.keys()))
+
+# Get the amount in numeric form (in INR)
+amount = amount_options[amount_choice]
+
+st.header(f"Test Payment with {amount_choice}")
+
+if st.button(f"Pay {amount_choice} Now"):
     # Create Razorpay order
     try:
         order_data = {
@@ -37,7 +47,7 @@ if st.button("Pay ₹10 Now"):
                     "amount": {order['amount']},  // Amount in paise
                     "currency": "INR",
                     "name": "Test Payment",
-                    "description": "Pay ₹10",
+                    "description": "Pay {amount_choice}",
                     "order_id": "{order['id']}",
                     "handler": function (response) {{
                         alert("Payment Successful! Payment ID: " + response.razorpay_payment_id);
