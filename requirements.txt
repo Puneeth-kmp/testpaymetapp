@@ -1,4 +1,5 @@
 streamlit
+streamlit==1.15.2
 razorpay
 altair
 pandas
@@ -6,3 +7,4 @@ numpy
 requests
 python-dotenv
 setuptools
+
