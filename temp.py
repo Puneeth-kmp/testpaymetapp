@@ -1,20 +1,28 @@
 import streamlit as st
+import os
 
-# App title
-st.title("Razorpay Payment Gateway Test")
+def list_directory_contents(path):
+    try:
+        # Get the contents of the directory
+        contents = os.listdir(path)
+        return contents
+    except FileNotFoundError:
+        return ["The provided path does not exist."]
+    except PermissionError:
+        return ["You do not have permission to access this path."]
+    except Exception as e:
+        return [f"An error occurred: {e}"]
 
-# Payment links
-payment_links = {
-    "₹10": "https://razorpay.me/@jstautomation?amount=CeQsAR0nTC%2BND0Le6liYzQ%3D%3D",
-    "₹50": "https://razorpay.me/@jstautomation?amount=bMZtQmLjQWplBAmd%2FyQdEA%3D%3D"
-}
+# Streamlit app interface
+st.title("Windows Directory Contents Viewer")
 
-# Create a dropdown for selecting amount
-amount_choice = st.selectbox("Select Amount to Pay", options=list(payment_links.keys()))
+# Input box for Windows path
+path = st.text_input("Enter a Windows path:", "C:\\")
 
-st.header(f"Test Payment with {amount_choice}")
-
-# Button to redirect to the payment link
-if st.button(f"Pay {amount_choice} Now"):
-    # Redirect to the appropriate Razorpay payment link
-    st.markdown(f"[Click here to make payment of {amount_choice}]( {payment_links[amount_choice]} )")
+if path:
+    st.subheader("Contents of the directory:")
+    contents = list_directory_contents(path)
+    
+    # Display contents in a list format
+    for item in contents:
+        st.write(item)
