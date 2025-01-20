@@ -17,7 +17,7 @@ def list_directory_contents(path):
 st.title("Windows Directory Contents Viewer")
 
 # Input box for Windows path
-path = st.text_input("Enter a Windows path:", "C:\\")
+path = st.text_input("Enter a valid Windows path on your PC (e.g., C:\\Users\\yourusername):")
 
 if path:
     st.subheader("Contents of the directory:")
