@@ -1,133 +1,145 @@
 import streamlit as st
 import os
-import pandas as pd
-from datetime import datetime
 
-# Create the main Streamlit interface
-st.title("📂 Directory Reader")
+st.title("📂 Directory Content Viewer")
 
-# Add HTML/JavaScript component for directory access
+# HTML/JavaScript component with recursive directory traversal
 st.components.v1.html("""
     <div style="margin-bottom: 20px;">
         <button onclick="selectDirectory()" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
             Choose Directory
         </button>
-        <div id="output" style="margin-top: 10px; padding: 10px; background-color: #f5f5f5; border-radius: 4px;"></div>
+        <div id="fileTree" style="margin-top: 10px; padding: 10px; background-color: #f5f5f5; border-radius: 4px; max-height: 500px; overflow-y: auto;"></div>
     </div>
 
     <script>
-        async function selectDirectory() {
-            try {
-                // Request directory access
-                const dirHandle = await window.showDirectoryPicker();
-                let files = [];
+    async function listDirectoryContents(dirHandle, path = '') {
+        let contents = [];
+        
+        try {
+            for await (const entry of dirHandle.values()) {
+                const entryPath = path ? `${path}/${entry.name}` : entry.name;
                 
-                // Iterate through directory contents
-                for await (const entry of dirHandle.values()) {
-                    files.push({
+                if (entry.kind === 'file') {
+                    contents.push({
+                        type: 'file',
                         name: entry.name,
-                        kind: entry.kind,
-                        lastModified: new Date().toISOString()
+                        path: entryPath
+                    });
+                } else if (entry.kind === 'directory') {
+                    // Get the directory handle and recursively list its contents
+                    const subDirHandle = await dirHandle.getDirectoryHandle(entry.name);
+                    const subContents = await listDirectoryContents(subDirHandle, entryPath);
+                    contents.push({
+                        type: 'directory',
+                        name: entry.name,
+                        path: entryPath,
+                        contents: subContents
                     });
                 }
-                
-                // Update the output display
-                const output = document.getElementById("output");
-                output.innerHTML = "<strong>Files found:</strong><br>" + 
-                    files.map(f => `${f.kind === 'file' ? '📄' : '📁'} ${f.name}`).join('<br>');
-                
-                // Send data to Streamlit
-                window.parent.postMessage({
-                    type: "streamlit:setComponentValue",
-                    files: files
-                }, "*");
-                
-            } catch (error) {
-                document.getElementById("output").innerHTML = 
-                    "⚠️ Failed to access directory. Please ensure permissions are granted.";
-                console.error(error);
+            }
+        } catch (error) {
+            console.error('Error reading directory:', error);
+        }
+        
+        return contents;
+    }
+
+    function buildHtmlTree(items, indent = 0) {
+        let html = '<ul style="list-style-type: none; padding-left: ' + indent + 'px;">';
+        
+        for (const item of items) {
+            if (item.type === 'directory') {
+                html += `
+                    <li>
+                        <span style="color: #2196F3;">📁 ${item.name}/</span>
+                        ${buildHtmlTree(item.contents, indent + 20)}
+                    </li>
+                `;
+            } else {
+                html += `
+                    <li>
+                        <span style="color: #4CAF50;">📄 ${item.name}</span>
+                    </li>
+                `;
             }
         }
-    </script>
-""", height=300)
-
-# Fallback file uploader
-st.write("Or upload a sample file to analyze:")
-uploaded_file = st.file_uploader("Choose a file from your directory", type=["csv", "xlsx", "txt", "bin"])
-
-if uploaded_file:
-    # Extract file information
-    file_info = {
-        "name": uploaded_file.name,
-        "size": uploaded_file.size,
-        "type": uploaded_file.type
+        
+        html += '</ul>';
+        return html;
     }
-    
-    # Display file information
-    st.success(f"✅ File uploaded: {file_info['name']}")
-    
-    # Get directory path (simulated for cloud environment)
-    directory = os.path.dirname(os.path.abspath(uploaded_file.name))
-    st.write(f"📁 Directory: {directory}")
-    
-    # Create a sample file listing (since we can't access the actual directory)
-    similar_files = [
-        {"name": uploaded_file.name, "type": "Current File"},
-        {"name": f"similar_1_{uploaded_file.name}", "type": "Similar File"},
-        {"name": f"similar_2_{uploaded_file.name}", "type": "Similar File"}
-    ]
-    
-    # Display files in a nice table
-    st.write("📑 Files in Directory:")
-    df = pd.DataFrame(similar_files)
-    st.dataframe(df, use_container_width=True)
-    
-    # Show statistics
-    st.write(f"📊 Total Files Found: {len(similar_files)}")
-    
-    # Add analysis options based on file type
-    if uploaded_file.type == "text/csv" or uploaded_file.name.endswith('.csv'):
-        try:
-            df = pd.read_csv(uploaded_file)
-            st.write("📈 CSV File Preview:")
-            st.dataframe(df.head())
-        except Exception as e:
-            st.error(f"Error reading CSV file: {str(e)}")
-    
-    elif uploaded_file.name.endswith('.bin'):
-        try:
-            # Read binary file content
-            content = uploaded_file.read()
-            st.write(f"📊 Binary File Size: {len(content)} bytes")
-            # Add hex view of first few bytes
-            st.code(content[:32].hex(), language="text")
-        except Exception as e:
-            st.error(f"Error reading binary file: {str(e)}")
 
-# Add help information
-with st.expander("ℹ️ Help"):
+    async function selectDirectory() {
+        try {
+            const dirHandle = await window.showDirectoryPicker();
+            const fileTree = document.getElementById('fileTree');
+            fileTree.innerHTML = '<div style="color: #666;">Loading directory contents...</div>';
+            
+            // Get all contents recursively
+            const contents = await listDirectoryContents(dirHandle);
+            
+            // Sort contents: directories first, then files, both alphabetically
+            contents.sort((a, b) => {
+                if (a.type === b.type) {
+                    return a.name.localeCompare(b.name);
+                }
+                return a.type === 'directory' ? -1 : 1;
+            });
+            
+            // Build and display the tree
+            const treeHtml = buildHtmlTree(contents);
+            fileTree.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <strong>📂 Selected Directory:</strong> ${dirHandle.name}
+                </div>
+                ${treeHtml}
+            `;
+            
+            // Send data to Streamlit
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                value: contents
+            }, '*');
+            
+        } catch (error) {
+            document.getElementById('fileTree').innerHTML = `
+                <div style="color: #f44336;">
+                    ⚠️ Error accessing directory: ${error.message}<br>
+                    Please ensure you've granted the necessary permissions.
+                </div>
+            `;
+            console.error('Directory access error:', error);
+        }
+    }
+    </script>
+""", height=600)
+
+# Help section
+with st.expander("ℹ️ How to Use"):
     st.markdown("""
-    ### How to use this directory reader:
-    1. Click 'Choose Directory' to use the File System Access API (modern browsers only)
-    2. Or use the file uploader to analyze individual files
-    3. The app will show related files and basic analysis
+    ### Instructions:
+    1. Click the 'Choose Directory' button above
+    2. Select the directory you want to view in the file picker dialog
+    3. Grant permission if prompted by your browser
+    4. The app will show all files and subdirectories in a tree structure
     
-    ### Supported Features:
-    - Directory browsing (via File System Access API)
-    - File uploading and analysis
-    - CSV file preview
-    - Binary file analysis
-    - Basic file statistics
+    ### Features:
+    - Shows all files and folders recursively
+    - Distinguishes between files (📄) and folders (📁)
+    - Maintains folder hierarchy with proper indentation
+    - Sorts directories first, then files alphabetically
     
     ### Notes:
-    - The File System Access API requires a modern browser and appropriate permissions
-    - Some features may be limited when running in the cloud
+    - Requires a modern browser with File System Access API support
+    - You must grant permission to access the selected directory
+    - No files are uploaded or stored - all processing is done locally
     """)
 
-# Add security note
+# Add security note in sidebar
 st.sidebar.info("""
-### Security Note
-- No files are stored on the server
-- All processing is done in your browser
-- Your directory structure remains private
+### Security Information
+- All directory reading is done locally in your browser
+- No files are uploaded to any server
+- Directory contents remain private on your device
+- You can revoke access permissions at any time through your browser settings
 """)
